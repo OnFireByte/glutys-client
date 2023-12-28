@@ -1,4 +1,4 @@
-import axios from "axios";
+import { AxiosInstance } from "axios";
 
 const MethodProxy = (queryName: string) => ({
     async apply(_target: { [x: string]: any }, _prop: any, args: any) {
@@ -8,7 +8,7 @@ const MethodProxy = (queryName: string) => ({
             args: args,
         };
 
-        const res = await axios.post(_target._path, body, {
+        const res = await _target._instance.post("", body, {
             headers: {
                 "Content-Type": "application/json",
                 userID: "asd",
@@ -23,7 +23,7 @@ const MethodProxy = (queryName: string) => ({
         }
 
         const func = () => {};
-        func._path = _target._path;
+        func._instance = _target._instance;
 
         return new Proxy(func, MethodProxy(`${queryName}.${prop}`));
     },
@@ -47,26 +47,15 @@ type Id<T> = {} & {
     [P in keyof T]: T[P];
 };
 
-type GroupedAPIContract<T> = Id<Unflatten<T>> & {
-    _path: string;
-};
+type GroupedAPIContract<T> = Id<Unflatten<T>>;
 type APIContractGeneric = Record<string, Function>;
 
-const handler = {
-    get(target: { [x: string]: any }, prop: string, _receiver: any): any {
-        if (typeof target[prop] === "object" && target[prop] !== null) {
-            return new Proxy(() => {}, handler);
-        }
-        return function () {
-            console.log(prop);
-        };
-    },
-};
-
-export function CreateAPIClient<T extends APIContractGeneric>(path: string): GroupedAPIContract<T> {
+export function CreateAPIClient<T extends APIContractGeneric>(
+    instance: AxiosInstance
+): GroupedAPIContract<T> {
     const obj = new Proxy(
         {
-            _path: path,
+            _instance: instance,
         },
         MethodProxy("")
     );
